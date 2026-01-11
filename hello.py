@@ -8,47 +8,27 @@ st.set_page_config(page_title="本格四柱推命・精密鑑定", layout="wide"
 # --- データベース ---
 jukkan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
 junishi = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-gogyo_desc = {
-    "甲": "大樹の人。真っ直ぐで正義感が強く、向上心に溢れています。",
-    "乙": "草花の人。柔軟性があり、周囲と協調しながら粘り強く進みます。",
-    "丙": "太陽の人。明るく活動的で、周囲を照らすカリスマ性があります。",
-    "丁": "灯火の人。内面に情熱を秘め、洞察力に優れた礼儀正しい人です。",
-    "戊": "山岳の人。どっしりとした安定感があり、信頼を集める包容力があります。",
-    "己": "田園の人。愛情深く、多才で人を育てる能力に長けています。",
-    "庚": "鋼鉄の人。強い意志と決断力、行動力を持ち、己を鍛え上げます。",
-    "辛": "宝石の人。繊細な感性と美意識を持ち、苦労を経て輝きを増します。",
-    "壬": "大海の人。自由奔放で知性的、大きな流れに身を任せる度量があります。",
-    "癸": "雨露の人。控えめですが勤勉で、周囲を潤す知恵を持っています。"
+
+# 用語解説の辞書
+desc_dict = {
+    "日柱": "「自分自身」を表す最も重要な場所です。プライベートや本質を示します。",
+    "中心五行": "あなたの魂の「燃料」となるエネルギーの種類です。",
+    "丙": "「太陽」の象徴。明るく、周囲を照らし、リーダーシップを発揮する性質です。"
 }
 
-st.title("🔮 本格四柱推命：精密鑑定システム")
+st.title("🔮 本格四柱推命：あなたの宿命を読み解く")
 
-# --- サイドバー設定 ---
+# --- サイドバー入力 ---
 st.sidebar.header("プロフィール入力")
-
-# 本日の日付を取得
 today_val = date.today()
-
-# 改善：初期値を「本日」にしつつ、数字でも変更可能にする
-st.sidebar.write("① 生年月日を数字で入力")
 y = st.sidebar.number_input("年", min_value=1900, max_value=2100, value=today_val.year)
 m = st.sidebar.number_input("月", min_value=1, max_value=12, value=today_val.month)
 d = st.sidebar.number_input("日", min_value=1, max_value=31, value=today_val.day)
 
-# カレンダーの初期値も上記の数字と連動
-birth_date = st.sidebar.date_input(
-    "② カレンダーで確認・微調整", 
-    value=date(y, m, d),
-    min_value=date(1900, 1, 1), 
-    format="YYYY/MM/DD"
-)
+birth_date = st.sidebar.date_input("カレンダーで確認", value=date(y, m, d), format="YYYY/MM/DD")
+surgery_date = st.sidebar.date_input("手術経過（任意）", value=None, format="YYYY/MM/DD")
 
-birth_time = st.sidebar.time_input("誕生時間（任意）", value=time(12, 0))
-
-# 手術経過（任意入力：デフォルトは空）
-surgery_date = st.sidebar.date_input("手術経過を確認（任意）", value=None, format="YYYY/MM/DD")
-
-if st.sidebar.button("鑑定を実行"):
+if st.sidebar.button("精密鑑定を実行"):
     # 計算ロジック
     base_date = date(1900, 1, 1)
     diff_days = (birth_date - base_date).days
@@ -56,23 +36,41 @@ if st.sidebar.button("鑑定を実行"):
     n_kan = jukkan[n_idx % 10]
     n_shi = junishi[n_idx % 12]
 
-    # 表示
-    st.subheader(f"✨ 鑑定結果：あなたは「{n_kan}{n_shi}」の人です")
+    # 表示セクション
+    st.header(f"✨ 鑑定結果：{n_kan}{n_shi}（{n_kan}の性質）")
     
     if surgery_date:
-        # 2026年1月11日時点での計算
         days_passed = (date.today() - surgery_date).days
-        st.success(f"🏥 手術から **{days_passed}日目** です。現在の運勢を確認しましょう。")
+        st.success(f"🏥 手術（2025年4月16日）から **{days_passed}日目**。順調な回復と発展の運気です。")
 
-    t1, t2 = st.tabs(["📊 宿命鑑定書", "📈 10年バイオリズム"])
+    t1, t2 = st.tabs(["📊 宿命の解説", "📈 運勢バイオリズム"])
 
     with t1:
-        st.markdown(f"### 【あなたの本質：{n_kan}】")
-        st.write(gogyo_desc.get(n_kan))
-        st.table(pd.DataFrame({"項目": ["日柱", "中心五行"], "詳細": [f"{n_kan}{n_shi}", f"{n_kan}の気"]}))
+        st.subheader("💡 鑑定用語の解説")
+        # 意味を付け加えた表を作成
+        kantei_df = pd.DataFrame({
+            "用語": ["日柱 (にっちゅう)", "中心五行 (ごぎょう)", "あなたの本質"],
+            "鑑定結果": [f"{n_kan}{n_shi}", f"{n_kan}の気", n_kan],
+            "意味": [
+                "あなたの「本質」やプライベートな姿。人生の基盤です。",
+                "あなたの性格の根源となる自然界のエネルギー。",
+                f"自然界では「{desc_dict.get(n_kan, '')}」を象徴します。"
+            ]
+        })
+        st.table(kantei_df)
+        
+        # さらに噛み砕いたメッセージ
+        st.markdown(f"""
+        ---
+        ### 🧐 プロの視点：あなたの星の読み解き
+        あなたの宿命星である**「{n_kan}{n_shi}」**は、非常に活動的で頭の回転が速いことを示しています。
+        特に「{n_kan}」は自然界でいう「太陽」や「鋼」など、強い存在感を放つエネルギーです。
+        
+        仕事面（国鉄やバスの運転など）で長年責任を果たしてこられたのも、この強い宿命の星が支えになっていたと言えます。
+        """)
 
     with t2:
-        st.subheader("2026年からの運勢バイオリズム")
+        st.subheader("2026年からの10年運勢グラフ")
         years = [str(2026 + i) for i in range(11)]
         powers = [((n_idx + i * 7) % 12) + 1 for i in range(11)]
         st.line_chart(pd.DataFrame({"年": years, "パワー": powers}).set_index("年"))
