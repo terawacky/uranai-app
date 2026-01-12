@@ -1,88 +1,101 @@
 import streamlit as st
-from datetime import datetime, time, date
+from datetime import datetime, date
 import pandas as pd
 
-# ページ設定（スマホ最適化）
-st.set_page_config(page_title="精密鑑定", layout="centered")
+# ページ設定
+st.set_page_config(page_title="本格四柱推命・統合鑑定システム", layout="centered")
 
-# --- データベース (十干別の解説) ---
+# --- データベース ---
+jukkan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+junishi = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+
 jukkan_info = {
-    "甲": {"タイプ": "「大樹」", "性格": "正義感が強いリーダー", "金運": "着実に財を成す運。無駄遣い厳禁。", "仕事": "指導的立場や長期プロジェクト向き。", "健康": "肝臓や神経系の疲れ。適度な休息を。"},
-    "乙": {"タイプ": "「草花」", "性格": "柔軟で粘り強い、和の精神", "金運": "人脈が財を呼ぶ運。縁を大切に。", "仕事": "サポート業務や細やかな管理。多才さを活かす。", "健康": "消化器系の不調。ストレスに注意。"},
-    "丙": {"タイプ": "「太陽」", "性格": "明るく情熱的。周囲を照らす", "金運": "収入は多いが支出も激しい。計画性を。", "仕事": "表現、宣伝、人を鼓舞する役割が最適。", "健康": "心臓、目、血圧。興奮しすぎに注意。"},
-    "丁": {"タイプ": "「灯火」", "性格": "内面に情熱を秘める洞察の人", "金運": "技術力、専門知識が財産になる運。", "仕事": "専門技術、研究、創作活動で本領発揮。", "健康": "心臓、冷え性。血液循環を意識。"},
-    "戊": {"タイプ": "「山岳」", "性格": "包容力があり信頼される安定感", "金運": "不動産や蓄財。どっしり構えて吉。", "仕事": "組織の管理、不動産、土木、農林業向き。", "健康": "胃腸、糖尿病。暴飲暴食に気をつけて。"},
-    "己": {"タイプ": "「田園」", "性格": "愛情深く多才。教え上手な人", "金運": "手堅く貯める運。家庭を大事に。", "仕事": "教育、事務、福祉など育成に関わる分野。", "健康": "胃、脾臓。規則正しい食生活を。"},
-    "庚": {"タイプ": "「鋼鉄」", "性格": "意志が強く決断力で道を拓く", "金運": "勝負運あり。目標が明確なほど潤う。", "仕事": "現場指揮、改革、機械、輸送に関わる仕事。", "健康": "肺、喉、大腸。呼吸器の乾燥に注意。"},
-    "辛": {"タイプ": "「宝石」", "性格": "繊細で美意識が高く試練で輝く", "金運": "質の高い財に恵まれる運。浪費注意。", "仕事": "精密、金融、貴金属、美的センスの仕事。", "健康": "肺、皮膚、アレルギー。環境の清浄を。"},
-    "壬": {"タイプ": "「大海」", "性格": "自由で知性的。大きな視点の持ち主", "金運": "流動的な財運。変化がチャンスを生む。", "仕事": "貿易、航海、企画、動きの激しい業界。", "健康": "腎臓、膀胱。水分の循環を整えて。"},
-    "癸": {"タイプ": "「雨露」", "性格": "勤勉で慈愛に満ち知恵で潤す", "金運": "コツコツと大きな財を築く運。", "仕事": "教育、癒やし、サービス業、水に関わる仕事。", "健康": "腎臓、冷え。泌尿器系と足腰のケアを。"}
+    "甲": {"タイプ": "大樹", "性格": "正義感が強いリーダー", "運勢": "成長と拡大。新しい一歩が吉。", "相性": ["己", "癸"]},
+    "乙": {"タイプ": "草花", "性格": "柔軟で粘り強い和の精神", "運勢": "協調と調和。人との繋がりが鍵。", "相性": ["庚", "壬"]},
+    "丙": {"タイプ": "太陽", "性格": "明るく情熱的なカリスマ", "運勢": "情熱と発信。注目を集める好機。", "相性": ["辛", "乙"]},
+    "丁": {"タイプ": "灯火", "性格": "洞察力の鋭い知性派", "運勢": "集中と探求。内面の充実に最適。", "相性": ["壬", "甲"]},
+    "戊": {"タイプ": "山岳", "性格": "包容力のある安定感", "運勢": "安定と信頼。足場を固める時期。", "相性": ["癸", "丙"]},
+    "己": {"タイプ": "田園", "性格": "愛情深く人を育てるのが上手", "運勢": "育成と奉仕。人を助けることが富に。", "相性": ["甲", "丁"]},
+    "庚": {"タイプ": "鋼鉄", "性格": "意志が強く決断力がある", "運勢": "決断と行動。恐れず変革を。", "相性": ["乙", "戊"]},
+    "辛": {"タイプ": "宝石", "性格": "繊細で美意識が高い", "運勢": "洗練と試練。磨きをかける時。", "相性": ["丙", "己"]},
+    "壬": {"タイプ": "大海", "性格": "自由で知性的なロマン派", "運勢": "自由と知性。広い視野で動く。", "相性": ["丁", "庚"]},
+    "癸": {"タイプ": "雨露", "性格": "勤勉で慈愛に満ちた知恵者", "運勢": "癒やしと知恵。周囲を潤す役目。", "相性": ["戊", "辛"]}
 }
 
-# --- 画面構成 ---
-st.subheader("鑑定カルテ：宿命とバイオリズム")
+def get_kanshi(target_date):
+    diff = (target_date - date(1900, 1, 1)).days
+    idx = (diff + 10) % 60
+    return jukkan[idx % 10], junishi[idx % 12], idx
 
-# 1. 入力セクション
-with st.expander("👤 プロフィール（デフォルト：本日を表示）", expanded=True):
-    today_val = date.today()
-    y_val = st.number_input("生まれた年", min_value=1900, max_value=2100, value=today_val.year)
-    m_val = st.number_input("生まれた月", min_value=1, max_value=12, value=today_val.month)
-    d_val = st.number_input("生まれた日", min_value=1, max_value=31, value=today_val.day)
+def get_tenchusatsu(day_idx):
+    group = day_idx // 10
+    mapping = ["戌亥", "申酉", "午未", "辰巳", "寅卯", "子丑"]
+    return mapping[group % 6]
+
+st.subheader("🔮 統合鑑定カルテ：プロフェッショナル版")
+
+# 1. 鑑定プロフィール入力
+with st.expander("👤 鑑定プロフィール（生年月日の初期値は本日です）", expanded=True):
+    today = date.today()
+    c1, c2, c3 = st.columns(3)
+    y_val = c1.number_input("生まれた年", 1900, 2100, today.year)
+    m_val = c2.number_input("生まれた月", 1, 12, today.month)
+    d_val = c3.number_input("生まれた日", 1, 31, today.day)
+    birth_date = date(y_val, m_val, d_val)
     
-    use_time = st.checkbox("誕生時間が分かればチェック")
-    time_str = st.time_input("時間", value=time(12, 0)).strftime("%H:%M") if use_time else "不明"
+    # 手術日を「イベント日」に変更し、初期値を空に設定
+    event_date = st.date_input("イベント経過日数（任意：起算日を選択）", value=None, format="YYYY/MM/DD")
+
+# 2. 相性鑑定セクション
+st.markdown("---")
+st.markdown("##### 🤝 相性鑑定（ご家族・友人）")
+col_a, col_b = st.columns(2)
+partner_name = col_a.text_input("お相手のお名前", placeholder="例：かみさん")
+partner_date = col_b.date_input("お相手の生年月日", value=today)
+
+# 3. 四柱推命の鑑定を実行
+if st.button("四柱推命の鑑定を実行", use_container_width=True):
+    n_kan, n_shi, n_idx = get_kanshi(birth_date)
+    today_kan, today_shi, _ = get_kanshi(today)
+    tenchu = get_tenchusatsu(n_idx)
     
-    surgery_date = st.date_input("イベントからの経過日数（手術日等）", value=None, format="YYYY/MM/DD")
+    # 今日の日運
+    st.info(f"📅 **今日の運勢（{today.strftime('%Y/%m/%d')}）**\n\nあなたの本質：{n_kan} ／ 今日のエネルギー：{today_kan}\n\n**【今日の一言】** {jukkan_info[n_kan]['運勢']}")
 
-# 2. 鑑定項目の選択
-target_topic = st.selectbox("🎯 重点鑑定項目", ["本質・性格", "仕事・適職", "金運・財運", "健康・病気"])
+    # 相性鑑定の実行
+    if partner_name:
+        p_kan, p_shi, _ = get_kanshi(partner_date)
+        st.success(f"🤝 **{partner_name}さんとの相性**\n\n{partner_name}さんは「{p_kan}」の性質をお持ちです。")
+        if p_kan in jukkan_info[n_kan]['相性']:
+            st.write("🌟 **最高の相性です！** お互いを補い合い、高め合える理想的な関係です。")
+        else:
+            st.write("🍵 **安定した関係です。** 違いを認め合うことで、より深い絆が生まれます。")
 
-if st.button("四柱推命鑑定を実行　鑑定結果は下方", use_container_width=True):
-    try:
-        birth_date = date(y_val, m_val, d_val)
-    except:
-        st.error("正しい日付を入力してください")
-        st.stop()
-
-    # 四柱推命計算
-    jukkan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-    junishi = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-    diff_days = (birth_date - date(1900, 1, 1)).days
-    n_idx = (diff_days + 10) % 60
-    n_kan, n_shi = jukkan[n_idx % 10], junishi[n_idx % 12]
-
+    # 精密解読
     st.markdown("---")
-    st.markdown(f"### 📋 鑑定結果：{n_kan}{n_shi}")
+    st.markdown("#### 📜 宿命の精密解読")
+    unsei_list = ["長生", "沐浴", "冠帯", "建禄", "帝旺", "衰", "病", "死", "墓", "絶", "胎", "養"]
+    unsei = unsei_list[n_idx % 12]
 
-    # 3. 専門用語の解説（タイトルをスマートに）
-    st.markdown("#### 📜 用語の解読")
-    explanation_df = pd.DataFrame({
-        "項目": ["日柱", "魂の性質", "性格タイプ"],
-        "結果": [f"{n_kan}{n_shi}", f"{n_kan}の気", n_kan],
-        "解説": [
+    res_df = pd.DataFrame({
+        "鑑定項目": ["日柱（自分自身）", "天中殺（休息期）", "十二運星（勢い）", "本質的な才能"],
+        "結果": [f"{n_kan}{n_shi}", f"{tenchu}空亡", unsei, "食神・偏印（技術と探求）"],
+        "プロの視点": [
             "あなたの核となる星です。",
-            "魂のエネルギー源。",
-            f"{jukkan_info[n_kan]['タイプ']}：{jukkan_info[n_kan]['性格']}"
+            f"{tenchu}の時期は無理をせず、体調管理や学びを優先すべき時です。",
+            f"エネルギーは「{unsei}」。現在の精神状態を表します。",
+            "専門技術を深め、ブログやPythonなどで表現する才能があります。"
         ]
     })
-    st.table(explanation_df)
+    st.table(res_df)
 
-    # 4. 詳細鑑定（タイトルをスマートに）
-    st.info(f"#### 🔍 {target_topic}")
-    if target_topic == "本質・性格":
-        st.write(f"あなたの性質は「{jukkan_info[n_kan]['タイプ']}」です。{jukkan_info[n_kan]['性格']}")
-    elif target_topic == "仕事・適職":
-        st.write(jukkan_info[n_kan]['仕事'])
-    elif target_topic == "金運・財運":
-        st.write(jukkan_info[n_kan]['金運'])
-    elif target_topic == "健康・病気":
-        st.write(jukkan_info[n_kan]['健康'])
+    # 経過日数の表示（入力がある場合のみ）
+    if event_date:
+        days_passed = (today - event_date).days
+        st.success(f"🚩 **イベントから {days_passed} 日目**")
 
-    if surgery_date:
-        days_passed = (date.today() - surgery_date).days
-        st.success(f"🏥 経過：{days_passed}日目")
-
-    # 5. 運勢グラフ（タイトルをスマートに）
-    st.markdown("#### 📈 未来バイオリズム")
-    powers = [((n_idx + i * 7) % 12) + 1 for i in range(11)]
-    st.line_chart(pd.DataFrame({"パワー": powers}, index=[str(2026+i) for i in range(11)]))
+    # 未来バイオリズム
+    st.markdown("#### 📈 未来バイオリズム（2026-2035）")
+    years = [str(2026 + i) for i in range(10)]
+    powers = [((n_idx + i * 7) % 12) + 1 for i in range(10)]
+    st.line_chart(pd.DataFrame({"パワー": powers}, index=years))
