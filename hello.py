@@ -23,21 +23,21 @@ jukkan_info = {
 st.subheader("鑑定カルテ：宿命とバイオリズム")
 
 # 1. 入力セクション
-with st.expander("👤 プロフィール（デフォルト：本日）", expanded=True):
+with st.expander("👤 プロフィール（デフォルト：本日を表示）", expanded=True):
     today_val = date.today()
-    y_val = st.number_input("年", min_value=1900, max_value=2100, value=today_val.year)
-    m_val = st.number_input("月", min_value=1, max_value=12, value=today_val.month)
-    d_val = st.number_input("日", min_value=1, max_value=31, value=today_val.day)
+    y_val = st.number_input("生まれた年", min_value=1900, max_value=2100, value=today_val.year)
+    m_val = st.number_input("生まれた月", min_value=1, max_value=12, value=today_val.month)
+    d_val = st.number_input("生まれた日", min_value=1, max_value=31, value=today_val.day)
     
-    use_time = st.checkbox("誕生時間を指定")
+    use_time = st.checkbox("誕生時間が分かればチェック")
     time_str = st.time_input("時間", value=time(12, 0)).strftime("%H:%M") if use_time else "不明"
     
-    surgery_date = st.date_input("経過記録（術日等）", value=None, format="YYYY/MM/DD")
+    surgery_date = st.date_input("イベントからの経過日数（手術日等）", value=None, format="YYYY/MM/DD")
 
 # 2. 鑑定項目の選択
 target_topic = st.selectbox("🎯 重点鑑定項目", ["本質・性格", "仕事・適職", "金運・財運", "健康・病気"])
 
-if st.button("精密鑑定を実行", use_container_width=True):
+if st.button("四柱推命鑑定を実行　鑑定結果は下方", use_container_width=True):
     try:
         birth_date = date(y_val, m_val, d_val)
     except:
