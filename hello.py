@@ -111,4 +111,3 @@ if st.button("四柱推命の鑑定を実行", use_container_width=True):
     years = [str(2026 + i) for i in range(10)]
     powers = [((n_idx + i * 7) % 12) + 1 for i in range(10)]
     st.line_chart(pd.DataFrame({"パワー": powers}, index=years))
-修正のポイント
