@@ -1,3 +1,12 @@
+鑑定結果の表をより「からふる」にするために、Streamlitのスタイリング機能を活用しましょう。
+
+文字の色や背景色を工夫することで、ブログにスクリーンショットを載せた際もパッと目を引く、華やかで品のある鑑定書になります。
+
+【カラー版】集約型・精密鑑定システム
+以下のコードを hello.py に上書き保存してください。表の各行に、運勢や性質に合わせた色がつくように設定しました。
+
+Python
+
 import streamlit as st
 from datetime import datetime, time, date
 import pandas as pd
@@ -19,12 +28,12 @@ jukkan_info = {
     "癸": {"タイプ": "☔ 雨露", "意味": "勤勉で慈愛に満ちた知恵者", "相性": ["戊", "辛"]}
 }
 
-jukkan = list(jukkan_info.keys())
-junishi = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
 unsei_trans = {"胎": "準備期", "養": "育成期", "長生": "発展期", "沐浴": "不安定期", "冠帯": "前進期", "建禄": "最盛期", "帝旺": "頂点期", "衰": "円熟期", "病": "内省期", "死": "探求期", "墓": "蓄積期", "絶": "転換期"}
 
 def get_kanshi(target_date):
     if target_date is None: return None, None, None
+    jukkan = list(jukkan_info.keys())
+    junishi = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
     diff = (target_date - date(1900, 1, 1)).days
     idx = (diff + 10) % 60
     return jukkan[idx % 10], junishi[idx % 12], idx
@@ -34,9 +43,18 @@ def get_tenchusatsu(day_idx):
     mapping = ["戌亥", "申酉", "午未", "辰巳", "寅卯", "子丑"]
     return mapping[group % 6]
 
+# 表の色付け用関数
+def color_rows(row):
+    color = 'background-color: transparent'
+    if "本質" in row['鑑定項目']: color = 'background-color: #e3f2fd' # 水色
+    elif "注意時期" in row['鑑定項目']: color = 'background-color: #ffebee' # 薄赤
+    elif "現在の勢い" in row['鑑定項目']: color = 'background-color: #f1f8e9' # 薄緑
+    elif "経過日数" in row['鑑定項目']: color = 'background-color: #fff3e0' # 薄オレンジ
+    elif "相性" in row['鑑定項目']: color = 'background-color: #f3e5f5' # 薄紫
+    return [color] * len(row)
+
 st.subheader("🔮 本格四柱推命・精密鑑定カルテ")
 
-# 1. 鑑定プロフィール（公開用）
 with st.expander("👤 鑑定プロフィールを入力", expanded=True):
     today = date.today()
     c1, c2, c3 = st.columns(3)
@@ -44,55 +62,42 @@ with st.expander("👤 鑑定プロフィールを入力", expanded=True):
     m_val = c2.number_input("生まれた月", 1, 12, 1)
     d_val = c3.number_input("生まれた日", 1, 31, 1)
     birth_date = date(y_val, m_val, d_val)
-    event_date = st.date_input("経過日数を知りたい日（任意）", value=None, min_value=date(1900, 1, 1))
+    event_date = st.date_input("経過を知りたい日（任意）", value=None, min_value=date(1900, 1, 1))
 
-# 2. 相性鑑定
 st.markdown("---")
 st.markdown("##### 🤝 相性鑑定（ご家族・友人）")
 col_a, col_b = st.columns(2)
 partner_name = col_a.text_input("お相手のお名前", placeholder="例：かみさん")
-partner_date = col_b.date_input("お相手の生年月日", value=None, min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
+partner_date = col_b.date_input("お相手の生年月日", value=None, min_value=date(1900, 1, 1))
 
-# 3. 鑑定実行
 if st.button("精密鑑定を実行", use_container_width=True):
     n_kan, n_shi, n_idx = get_kanshi(birth_date)
     tenchu = get_tenchusatsu(n_idx)
-    unsei_list = ["長生", "沐浴", "冠帯", "建禄", "帝旺", "衰", "病", "死", "墓", "絶", "胎", "養"]
-    unsei = unsei_list[n_idx % 12]
+    unsei = ["長生", "沐浴", "冠帯", "建禄", "帝旺", "衰", "病", "死", "墓", "絶", "胎", "養"][n_idx % 12]
     
-    # データの整理
-    items = ["本質（魂のタイプ）", "注意時期（天中殺）", "現在の勢い（運勢）"]
-    results = [f"{jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})", f"{tenchu}空亡", f"{unsei_trans[unsei]} ({unsei})"]
-    details = [f"{jukkan_info[n_kan]['意味']}", "無理を控え、体調を整える時期です。", "現在のエネルギー状態を表します。"]
+    items, results, details = [], [], []
+    items.extend(["本質（魂のタイプ）", "注意時期（天中殺）", "現在の勢い（運勢）"])
+    results.extend([f"{jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})", f"{tenchu}空亡", f"{unsei_trans[unsei]} ({unsei})"])
+    details.extend([f"{jukkan_info[n_kan]['意味']}", "無理を控え、体調を整える時期です。", "現在のエネルギー状態です。"])
 
-    # イベント経過があれば追加
     if event_date:
-        days_passed = (today - event_date).days
         items.append("イベント経過日数")
-        results.append(f"{days_passed} 日目")
+        results.append(f"{(today - event_date).days} 日目")
         details.append("指定された起算日からの通算日数です。")
 
-    # 相性があれば追加
     if partner_date:
         p_kan, p_shi, _ = get_kanshi(partner_date)
         items.append(f"{partner_name if partner_name else 'お相手'}との相性")
         results.append(f"{jukkan_info[p_kan]['タイプ']} ({p_kan}{p_shi})")
-        comp = "🌟 最高の相性です！" if p_kan in jukkan_info[n_kan]['相性'] else "🍵 落ち着いた相性です。"
-        details.append(comp)
+        details.append("🌟 最高！" if p_kan in jukkan_info[n_kan]['相性'] else "🍵 落ち着いた相性")
 
     st.markdown("---")
     st.markdown("### 📜 鑑定結果一覧")
     
-    # すべての結果を一つの表に集約
-    df_result = pd.DataFrame({
-        "鑑定項目": items,
-        "診断結果": results,
-        "詳細メッセージ": details
-    })
-    st.table(df_result)
+    # カラーリングを適用した表を表示
+    df_result = pd.DataFrame({"鑑定項目": items, "診断結果": results, "詳細メッセージ": details})
+    st.table(df_result.style.apply(color_rows, axis=1))
 
-    # バイオリズムグラフ
-    st.markdown("#### 📈 未来バイオリズム（10年間の波）")
-    years = [str(today.year + i) for i in range(10)]
+    st.markdown("#### 📈 未来バイオリズム")
     powers = [((n_idx + i * 7) % 12) + 1 for i in range(10)]
-    st.line_chart(pd.DataFrame({"パワー": powers}, index=years))
+    st.line_chart(pd.DataFrame({"パワー": powers}, index=[str(today.year + i) for i in range(10)]))
