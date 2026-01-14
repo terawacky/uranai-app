@@ -38,54 +38,73 @@ def get_tenchusatsu(day_idx):
 
 # --- 画像生成関数 ---
 def create_result_image(name, n_kan, n_shi, unsei, tenchu, days):
-    img = Image.new('RGB', (600, 400), color=(245, 245, 245))
+    img = Image.new('RGB', (600, 420), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
-    # 簡易的な描画（フォント設定は環境に依存するため標準フォントを使用）
-    draw.rectangle([20, 20, 580, 380], outline=(100, 100, 100), width=2)
-    draw.text((40, 40), f"【四柱推命 鑑定書】 {name} 様", fill=(0, 0, 0))
-    draw.text((40, 80), f"本質：{jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})", fill=(0, 0, 0))
-    draw.text((40, 120), f"今の勢い：{unsei} ({unsei_trans[unsei]})", fill=(0, 0, 0))
-    draw.text((40, 160), f"注意どき：{tenchu}空亡", fill=(200, 0, 0))
-    if days: draw.text((40, 200), f"経過記録：{days}日目", fill=(0, 100, 0))
-    draw.text((40, 340), f"鑑定日: {date.today()}", fill=(150, 150, 150))
+    draw.rectangle([10, 10, 590, 410], outline=(200, 200, 200), width=3)
+    draw.text((30, 30), f"【四柱推命 精密鑑定書】", fill=(50, 50, 50))
+    draw.text((30, 80), f"鑑定対象: {name if name else 'あなた'}", fill=(0, 0, 0))
+    draw.text((30, 120), f"本質タイプ: {jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})", fill=(0, 0, 0))
+    draw.text((30, 160), f"運勢の勢い: {unsei_trans[unsei]} ({unsei})", fill=(0, 0, 0))
+    draw.text((30, 200), f"注意が必要な時期: {tenchu}空亡", fill=(200, 0, 0))
+    if days: draw.text((30, 240), f"イベントからの日数: {days}日目", fill=(0, 128, 0))
+    draw.text((30, 370), f"鑑定日: {date.today()} / 作成: 本格四柱推命システム", fill=(150, 150, 150))
     
     img_byte_arr = io.BytesIO()
     img.save(img_byte_arr, format='PNG')
     return img_byte_arr.getvalue()
 
-st.subheader("🔮 四柱推命・精密鑑定（画像保存機能付）")
+st.subheader("🔮 本格四柱推命：精密鑑定システム")
+st.write("ご自身の生年月日とお相手の情報を入力して、運勢を解読します。")
 
-# 1. 入力
-with st.expander("👤 鑑定プロフィール", expanded=True):
+# 1. 入力（デフォルト値を一般的に）
+with st.expander("👤 鑑定プロフィールを入力", expanded=True):
     today = date.today()
     c1, c2, c3 = st.columns(3)
-    y_val = c1.number_input("年", 1900, 2100, 1957)
-    m_val = c2.number_input("月", 1, 12, 11)
-    d_val = c3.number_input("日", 1, 31, 20)
+    y_val = c1.number_input("生まれた年", 1900, 2100, 2000)
+    m_val = c2.number_input("生まれた月", 1, 12, 1)
+    d_val = c3.number_input("生まれた日", 1, 31, 1)
     birth_date = date(y_val, m_val, d_val)
-    event_date = st.date_input("経過を知りたい起算日（任意）", value=date(2025, 4, 16))
+    
+    use_time = st.checkbox("生まれた時間を指定する")
+    if use_time:
+        st.time_input("時間を選択", value=time(12, 0))
+    
+    event_date = st.date_input("経過日数を知りたい日（任意）", value=None, min_value=date(1900, 1, 1))
 
 # 2. 相性
 st.markdown("---")
-partner_name = st.text_input("お相手のお名前", value="かみさん")
-partner_date = st.date_input("お相手の生年月日", value=date(1957, 9, 10), min_value=date(1900, 1, 1))
+st.markdown("##### 🤝 相性鑑定（ご家族・友人）")
+col_a, col_b = st.columns(2)
+partner_name = col_a.text_input("お相手のお名前", placeholder="例：かみさん")
+partner_date = col_b.date_input("お相手の生年月日", value=None, min_value=date(1900, 1, 1))
 
 # 3. 実行
-if st.button("鑑定を実行", use_container_width=True):
+if st.button("四柱推命の鑑定を実行", use_container_width=True):
     n_kan, n_shi, n_idx = get_kanshi(birth_date)
     tenchu = get_tenchusatsu(n_idx)
-    unsei = ["長生", "沐浴", "冠帯", "建禄", "帝旺", "衰", "病", "死", "墓", "絶", "胎", "養"][n_idx % 12]
+    unsei_list = ["長生", "沐浴", "冠帯", "建禄", "帝旺", "衰", "病", "死", "墓", "絶", "胎", "養"]
+    unsei = unsei_list[n_idx % 12]
     days_passed = (today - event_date).days if event_date else None
 
     # 結果表示
-    st.success(f"あなたの本質：{jukkan_info[n_kan]['タイプ']}")
-    st.write(f"現在は「{unsei_trans[unsei]}」の時期です。")
+    st.markdown("---")
+    st.success(f"あなたの本質は【{jukkan_info[n_kan]['タイプ']}】です")
     
-    # 画像生成とダウンロードボタン
-    img_data = create_result_image("あなた", n_kan, n_shi, unsei, tenchu, days_passed)
-    st.download_button(label="📸 鑑定結果を画像として保存", data=img_data, file_name=f"uranai_{today}.png", mime="image/png")
+    # 簡易表
+    res_df = pd.DataFrame({
+        "項目": ["本質", "注意時期", "今の勢い"],
+        "鑑定結果": [f"{jukkan_info[n_kan]['タイプ']}", f"{tenchu}空亡", f"{unsei_trans[unsei]}"],
+        "解説": [f"{jukkan_info[n_kan]['意味']}", "無理をせず体調を整える時期です。", "現在のエネルギー状態を表します。"]
+    })
+    st.table(res_df)
 
-    # 相性
+    # 画像保存ボタン（鑑定後のみ出現）
+    img_data = create_result_image("あなた", n_kan, n_shi, unsei, tenchu, days_passed)
+    st.download_button(label="📸 鑑定結果を画像として保存", data=img_data, file_name=f"uranai_result.png", mime="image/png")
+
     if partner_date:
         p_kan, _, _ = get_kanshi(partner_date)
-        st.info(f"🤝 {partner_name}さんは【{jukkan_info[p_kan]['タイプ']}】です。相性ばっちり！")
+        st.info(f"🤝 **{partner_name if partner_name else 'お相手'}さんとの相性**\n\nお相手は【{jukkan_info[p_kan]['タイプ']}】の性質です。")
+
+    if event_date:
+        st.info(f"🚩 **経過日数：あの日から {days_passed} 日目**")
