@@ -3,7 +3,7 @@ from datetime import datetime, time, date
 import pandas as pd
 
 # ページ設定
-st.set_page_config(page_title="本格四柱推命・統合鑑定システム", layout="centered")
+st.set_page_config(page_title="本格四柱推命・精密鑑定", layout="centered")
 
 # --- データベース ---
 jukkan_info = {
@@ -34,60 +34,65 @@ def get_tenchusatsu(day_idx):
     mapping = ["戌亥", "申酉", "午未", "辰巳", "寅卯", "子丑"]
     return mapping[group % 6]
 
-st.subheader("🔮 本格四柱推命・精密鑑定システム")
+st.subheader("🔮 本格四柱推命・精密鑑定カルテ")
 
-# 1. 鑑定プロフィール
-with st.expander("👤 あなたの生年月日を入力", expanded=True):
+# 1. 鑑定プロフィール（公開用）
+with st.expander("👤 鑑定プロフィールを入力", expanded=True):
     today = date.today()
     c1, c2, c3 = st.columns(3)
-    y_val = c1.number_input("年", 1900, 2100, 2000)
-    m_val = c2.number_input("月", 1, 12, 1)
-    d_val = c3.number_input("日", 1, 31, 1)
+    y_val = c1.number_input("生まれた年", 1900, 2100, 2000)
+    m_val = c2.number_input("生まれた月", 1, 12, 1)
+    d_val = c3.number_input("生まれた日", 1, 31, 1)
     birth_date = date(y_val, m_val, d_val)
-    event_date = st.date_input("経過日数を知りたい日（任意：手術日など）", value=None, min_value=date(1900, 1, 1))
+    event_date = st.date_input("経過日数を知りたい日（任意）", value=None, min_value=date(1900, 1, 1))
 
 # 2. 相性鑑定
 st.markdown("---")
 st.markdown("##### 🤝 相性鑑定（ご家族・友人）")
 col_a, col_b = st.columns(2)
 partner_name = col_a.text_input("お相手のお名前", placeholder="例：かみさん")
-partner_date = col_b.date_input("お相手の生年月日", value=None, min_value=date(1900, 1, 1))
+partner_date = col_b.date_input("お相手の生年月日", value=None, min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
 
 # 3. 鑑定実行
-if st.button("鑑定を実行", use_container_width=True):
+if st.button("精密鑑定を実行", use_container_width=True):
     n_kan, n_shi, n_idx = get_kanshi(birth_date)
     tenchu = get_tenchusatsu(n_idx)
-    unsei_name = ["長生", "沐浴", "冠帯", "建禄", "帝旺", "衰", "病", "死", "墓", "絶", "胎", "養"][n_idx % 12]
+    unsei_list = ["長生", "沐浴", "冠帯", "建禄", "帝旺", "衰", "病", "死", "墓", "絶", "胎", "養"]
+    unsei = unsei_list[n_idx % 12]
     
-    st.markdown("---")
-    st.success(f"あなたの本質は【{jukkan_info[n_kan]['タイプ']}】です")
+    # データの整理
+    items = ["本質（魂のタイプ）", "注意時期（天中殺）", "現在の勢い（運勢）"]
+    results = [f"{jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})", f"{tenchu}空亡", f"{unsei_trans[unsei]} ({unsei})"]
+    details = [f"{jukkan_info[n_kan]['意味']}", "無理を控え、体調を整える時期です。", "現在のエネルギー状態を表します。"]
 
-    # イベント経過
-    days_passed = (today - event_date).days if event_date else None
-    if days_passed:
-        st.warning(f"🚩 **あの日から {days_passed} 日目**")
+    # イベント経過があれば追加
+    if event_date:
+        days_passed = (today - event_date).days
+        items.append("イベント経過日数")
+        results.append(f"{days_passed} 日目")
+        details.append("指定された起算日からの通算日数です。")
 
-    # ブログ用テキスト生成機能（文字化け対策の目玉機能）
-    st.markdown("#### 📝 ブログ投稿用テキスト")
-    blog_text = f"""
-【四柱推命 鑑定レポート】
-■鑑定日：{today}
-■経過記録：{f"術後 {days_passed} 日目" if days_passed else "記録なし"}
-■本質タイプ：{jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})
-■現在の勢い：{unsei_trans[unsei_name]} ({unsei_name})
-■注意どき：{tenchu}空亡
---------------------------------
-    """
-    st.code(blog_text, language="text")
-    st.caption("上記の枠内の文字をコピーしてブログに貼り付けると綺麗に表示されます。")
-
-    # 相性
+    # 相性があれば追加
     if partner_date:
-        p_kan, _, _ = get_kanshi(partner_date)
-        st.info(f"🤝 **{partner_name if partner_name else 'お相手'}さんは【{jukkan_info[p_kan]['タイプ']}】です**")
+        p_kan, p_shi, _ = get_kanshi(partner_date)
+        items.append(f"{partner_name if partner_name else 'お相手'}との相性")
+        results.append(f"{jukkan_info[p_kan]['タイプ']} ({p_kan}{p_shi})")
+        comp = "🌟 最高の相性です！" if p_kan in jukkan_info[n_kan]['相性'] else "🍵 落ち着いた相性です。"
+        details.append(comp)
 
-    # 未来バイオリズム
-    st.markdown("#### 📈 未来バイオリズム")
+    st.markdown("---")
+    st.markdown("### 📜 鑑定結果一覧")
+    
+    # すべての結果を一つの表に集約
+    df_result = pd.DataFrame({
+        "鑑定項目": items,
+        "診断結果": results,
+        "詳細メッセージ": details
+    })
+    st.table(df_result)
+
+    # バイオリズムグラフ
+    st.markdown("#### 📈 未来バイオリズム（10年間の波）")
     years = [str(today.year + i) for i in range(10)]
     powers = [((n_idx + i * 7) % 12) + 1 for i in range(10)]
     st.line_chart(pd.DataFrame({"パワー": powers}, index=years))
