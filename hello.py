@@ -3,7 +3,7 @@ from datetime import datetime, time, date
 import pandas as pd
 
 # ページ設定
-st.set_page_config(page_title="本格四柱推命・統合鑑定システム", layout="centered")
+st.set_page_config(page_title="本格四柱推命システム", layout="centered")
 
 # --- データベース ---
 jukkan_info = {
@@ -34,7 +34,7 @@ unsei_trans = {
 }
 
 def get_kanshi(target_date):
-    if target_date is None:  # エラー対策：日付が空なら計算しない
+    if target_date is None:
         return None, None, None
     diff = (target_date - date(1900, 1, 1)).days
     idx = (diff + 10) % 60
@@ -45,29 +45,31 @@ def get_tenchusatsu(day_idx):
     mapping = ["戌亥", "申酉", "午未", "辰巳", "寅卯", "子丑"]
     return mapping[group % 6]
 
-st.subheader("🔮 精密鑑定カルテ：エラー対策版")
+st.subheader("🔮 四柱推命")
 
 # 1. プロフィール入力
-with st.expander("👤 鑑定プロフィール（初期値：本日）", expanded=True):
+with st.expander("👤 鑑定プロフィール（初期値：ユーザー設定）", expanded=True):
     today = date.today()
     c1, c2, c3 = st.columns(3)
-    y_val = c1.number_input("生まれた年", 1900, 2100, 1957) # あなたの年に設定
-    m_val = c2.number_input("生まれた月", 1, 12, 11)      # あなたの月に設定
-    d_val = c3.number_input("生まれた日", 1, 31, 20)      # あなたの日に設定
+    y_val = c1.number_input("生まれた年", 1900, 2100, 1957)
+    m_val = c2.number_input("生まれた月", 1, 12, 11)
+    d_val = c3.number_input("生まれた日", 1, 31, 20)
     birth_date = date(y_val, m_val, d_val)
     
     use_time = st.checkbox("生まれた時間を指定する")
     if use_time:
         st.time_input("生まれた時間", value=time(12, 0))
     
-    event_date = st.date_input("イベント経過日数（任意：起算日を選択）", value=None)
+    # 範囲を広げたイベント起算日
+    event_date = st.date_input("イベント経過日数（任意）", value=None, min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
 
-# 2. 相性鑑定
+# 2. 相性鑑定（日付の範囲を拡大修正）
 st.markdown("---")
 st.markdown("##### 🤝 相性鑑定（ご家族・友人）")
 col_a, col_b = st.columns(2)
-partner_name = col_a.text_input("お相手のお名前", placeholder="例：かみさん")
-partner_date = col_b.date_input("お相手の生年月日", value=None) # 最初は空にする
+partner_name = col_a.text_input("お相手のお名前", value="かみさん")
+# ここで min_value と max_value を指定して1957年も選べるようにしました
+partner_date = col_b.date_input("お相手の生年月日", value=date(1957, 9, 10), min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
 
 # 3. 鑑定実行
 if st.button("四柱推命の鑑定を実行", use_container_width=True):
@@ -91,11 +93,10 @@ if st.button("四柱推命の鑑定を実行", use_container_width=True):
     })
     st.table(res_df)
 
-    # 相性鑑定（お相手の日付がある場合のみ実行）
     if partner_date:
         p_kan, p_shi, _ = get_kanshi(partner_date)
         p_type = jukkan_info[p_kan]['タイプ']
-        st.success(f"🤝 **{partner_name if partner_name else 'お相手'}さんとの相性**")
+        st.success(f"🤝 **{partner_name}さんとの相性**")
         st.write(f"性質は【{p_type}】です。")
         if p_kan in jukkan_info[n_kan]['相性']:
             st.write("🌟 **最高の相性です！**")
@@ -104,9 +105,8 @@ if st.button("四柱推命の鑑定を実行", use_container_width=True):
 
     if event_date:
         days_passed = (today - event_date).days
-        st.info(f"🚩 **イベント（術後等）から {days_passed} 日目**") # 2026/1/14で273日目
+        st.info(f"🚩 **イベントから {days_passed} 日目**")
 
-    # バイオリズム
     st.markdown("#### 📈 未来バイオリズム（2026-2035）")
     years = [str(2026 + i) for i in range(10)]
     powers = [((n_idx + i * 7) % 12) + 1 for i in range(10)]
