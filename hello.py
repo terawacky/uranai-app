@@ -1,12 +1,3 @@
-鑑定結果の表をより「からふる」にするために、Streamlitのスタイリング機能を活用しましょう。
-
-文字の色や背景色を工夫することで、ブログにスクリーンショットを載せた際もパッと目を引く、華やかで品のある鑑定書になります。
-
-【カラー版】集約型・精密鑑定システム
-以下のコードを hello.py に上書き保存してください。表の各行に、運勢や性質に合わせた色がつくように設定しました。
-
-Python
-
 import streamlit as st
 from datetime import datetime, time, date
 import pandas as pd
