@@ -1,7 +1,7 @@
 import streamlit as st
 from datetime import datetime, time, date
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import io
 
 # ページ設定
@@ -36,27 +36,24 @@ def get_tenchusatsu(day_idx):
     mapping = ["戌亥", "申酉", "午未", "辰巳", "寅卯", "子丑"]
     return mapping[group % 6]
 
-# --- 画像生成関数 ---
 def create_result_image(name, n_kan, n_shi, unsei, tenchu, days):
     img = Image.new('RGB', (600, 420), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
     draw.rectangle([10, 10, 590, 410], outline=(200, 200, 200), width=3)
-    draw.text((30, 30), f"【四柱推命 精密鑑定書】", fill=(50, 50, 50))
+    draw.text((30, 30), "【四柱推命 精密鑑定書】", fill=(50, 50, 50))
     draw.text((30, 80), f"鑑定対象: {name if name else 'あなた'}", fill=(0, 0, 0))
     draw.text((30, 120), f"本質タイプ: {jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})", fill=(0, 0, 0))
     draw.text((30, 160), f"運勢の勢い: {unsei_trans[unsei]} ({unsei})", fill=(0, 0, 0))
     draw.text((30, 200), f"注意が必要な時期: {tenchu}空亡", fill=(200, 0, 0))
     if days: draw.text((30, 240), f"イベントからの日数: {days}日目", fill=(0, 128, 0))
-    draw.text((30, 370), f"鑑定日: {date.today()} / 作成: 本格四柱推命システム", fill=(150, 150, 150))
-    
+    draw.text((30, 370), f"鑑定日: {date.today()}", fill=(150, 150, 150))
     img_byte_arr = io.BytesIO()
     img.save(img_byte_arr, format='PNG')
     return img_byte_arr.getvalue()
 
 st.subheader("🔮 本格四柱推命：精密鑑定システム")
-st.write("ご自身の生年月日とお相手の情報を入力して、運勢を解読します。")
 
-# 1. 入力（デフォルト値を一般的に）
+# 1. 入力（公開用デフォルト設定）
 with st.expander("👤 鑑定プロフィールを入力", expanded=True):
     today = date.today()
     c1, c2, c3 = st.columns(3)
@@ -86,25 +83,31 @@ if st.button("四柱推命の鑑定を実行", use_container_width=True):
     unsei = unsei_list[n_idx % 12]
     days_passed = (today - event_date).days if event_date else None
 
-    # 結果表示
     st.markdown("---")
     st.success(f"あなたの本質は【{jukkan_info[n_kan]['タイプ']}】です")
     
-    # 簡易表
+    # 鑑定表
     res_df = pd.DataFrame({
         "項目": ["本質", "注意時期", "今の勢い"],
         "鑑定結果": [f"{jukkan_info[n_kan]['タイプ']}", f"{tenchu}空亡", f"{unsei_trans[unsei]}"],
-        "解説": [f"{jukkan_info[n_kan]['意味']}", "無理をせず体調を整える時期です。", "現在のエネルギー状態を表します。"]
+        "解説": [f"{jukkan_info[n_kan]['意味']}", "体調管理に気を配る時期です。", "現在のエネルギー状態です。"]
     })
     st.table(res_df)
 
-    # 画像保存ボタン（鑑定後のみ出現）
+    # 画像保存ボタン
     img_data = create_result_image("あなた", n_kan, n_shi, unsei, tenchu, days_passed)
-    st.download_button(label="📸 鑑定結果を画像として保存", data=img_data, file_name=f"uranai_result.png", mime="image/png")
+    st.download_button(label="📸 鑑定結果を画像として保存", data=img_data, file_name="uranai_result.png", mime="image/png")
 
     if partner_date:
         p_kan, _, _ = get_kanshi(partner_date)
-        st.info(f"🤝 **{partner_name if partner_name else 'お相手'}さんとの相性**\n\nお相手は【{jukkan_info[p_kan]['タイプ']}】の性質です。")
+        st.info(f"🤝 **{partner_name if partner_name else 'お相手'}さんは【{jukkan_info[p_kan]['タイプ']}】です**")
 
     if event_date:
-        st.info(f"🚩 **経過日数：あの日から {days_passed} 日目**")
+        st.info(f"🚩 **あの日から {days_passed} 日目**")
+
+    # 📈 バイオリズムグラフ（復活）
+    st.markdown("#### 📈 未来バイオリズム（10年間の波）")
+    years = [str(today.year + i) for i in range(10)]
+    powers = [((n_idx + i * 7) % 12) + 1 for i in range(10)]
+    chart_data = pd.DataFrame({"パワー": powers}, index=years)
+    st.line_chart(chart_data)
