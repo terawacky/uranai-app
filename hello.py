@@ -36,27 +36,32 @@ def get_tenchusatsu(day_idx):
     mapping = ["戌亥", "申酉", "午未", "辰巳", "寅卯", "子丑"]
     return mapping[group % 6]
 
+# --- 画像保存の文字化け対策版 ---
 def create_result_image(name, n_kan, n_shi, unsei, tenchu, days):
-    img = Image.new('RGB', (600, 420), color=(255, 255, 255))
+    img = Image.new('RGB', (600, 450), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
-    draw.rectangle([10, 10, 590, 410], outline=(200, 200, 200), width=3)
-    draw.text((30, 30), "【四柱推命 精密鑑定書】", fill=(50, 50, 50))
-    draw.text((30, 80), f"鑑定対象: {name if name else 'あなた'}", fill=(0, 0, 0))
-    draw.text((30, 120), f"本質タイプ: {jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})", fill=(0, 0, 0))
-    draw.text((30, 160), f"運勢の勢い: {unsei_trans[unsei]} ({unsei})", fill=(0, 0, 0))
-    draw.text((30, 200), f"注意が必要な時期: {tenchu}空亡", fill=(200, 0, 0))
-    if days: draw.text((30, 240), f"イベントからの日数: {days}日目", fill=(0, 128, 0))
-    draw.text((30, 370), f"鑑定日: {date.today()}", fill=(150, 150, 150))
+    draw.rectangle([10, 10, 590, 440], outline=(200, 200, 200), width=3)
+    
+    # サーバー環境でも文字化けしにくいよう、英数字をメインに構成
+    draw.text((30, 30), " Fortune Telling Result Card ", fill=(50, 50, 50))
+    draw.text((30, 80), f" Target: {name if name else 'User'}", fill=(0, 0, 0))
+    draw.text((30, 120), f" Type: {jukkan_info[n_kan]['タイプ']} ({n_kan}{n_shi})", fill=(0, 0, 0))
+    draw.text((30, 160), f" Energy: {unsei_trans[unsei]} ({unsei})", fill=(0, 0, 0))
+    draw.text((30, 200), f" Caution: {tenchu} period", fill=(200, 0, 0))
+    if days: draw.text((30, 240), f" Days Passed: {days} days", fill=(0, 128, 0))
+    draw.text((30, 400), f" Date: {date.today()}", fill=(150, 150, 150))
+    
     img_byte_arr = io.BytesIO()
     img.save(img_byte_arr, format='PNG')
     return img_byte_arr.getvalue()
 
 st.subheader("🔮 本格四柱推命：精密鑑定システム")
 
-# 1. 入力（公開用デフォルト設定）
+# 1. 鑑定プロフィール
 with st.expander("👤 鑑定プロフィールを入力", expanded=True):
     today = date.today()
     c1, c2, c3 = st.columns(3)
+    # 公開用に標準値を設定
     y_val = c1.number_input("生まれた年", 1900, 2100, 2000)
     m_val = c2.number_input("生まれた月", 1, 12, 1)
     d_val = c3.number_input("生まれた日", 1, 31, 1)
@@ -66,14 +71,15 @@ with st.expander("👤 鑑定プロフィールを入力", expanded=True):
     if use_time:
         st.time_input("時間を選択", value=time(12, 0))
     
+    # 日付範囲エラーを回避
     event_date = st.date_input("経過日数を知りたい日（任意）", value=None, min_value=date(1900, 1, 1))
 
-# 2. 相性
+# 2. 相性鑑定
 st.markdown("---")
 st.markdown("##### 🤝 相性鑑定（ご家族・友人）")
 col_a, col_b = st.columns(2)
 partner_name = col_a.text_input("お相手のお名前", placeholder="例：かみさん")
-partner_date = col_b.date_input("お相手の生年月日", value=None, min_value=date(1900, 1, 1))
+partner_date = col_b.date_input("お相手の生年月日", value=None, min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
 
 # 3. 実行
 if st.button("四柱推命の鑑定を実行", use_container_width=True):
@@ -94,20 +100,19 @@ if st.button("四柱推命の鑑定を実行", use_container_width=True):
     })
     st.table(res_df)
 
-    # 画像保存ボタン
-    img_data = create_result_image("あなた", n_kan, n_shi, unsei, tenchu, days_passed)
-    st.download_button(label="📸 鑑定結果を画像として保存", data=img_data, file_name="uranai_result.png", mime="image/png")
+    # 画像保存ボタン（文字化け対策版）
+    img_data = create_result_image("Result", n_kan, n_shi, unsei, tenchu, days_passed)
+    st.download_button(label="📸 鑑定結果を画像として保存", data=img_data, file_name="uranai_card.png", mime="image/png")
 
     if partner_date:
         p_kan, _, _ = get_kanshi(partner_date)
         st.info(f"🤝 **{partner_name if partner_name else 'お相手'}さんは【{jukkan_info[p_kan]['タイプ']}】です**")
 
     if event_date:
-        st.info(f"🚩 **あの日から {days_passed} 日目**")
+        st.info(f"🚩 **経過日数：あの日から {days_passed} 日目**") # 2026/1/14で273日目
 
-    # 📈 バイオリズムグラフ（復活）
+    # 📈 バイオリズムグラフ
     st.markdown("#### 📈 未来バイオリズム（10年間の波）")
     years = [str(today.year + i) for i in range(10)]
     powers = [((n_idx + i * 7) % 12) + 1 for i in range(10)]
-    chart_data = pd.DataFrame({"パワー": powers}, index=years)
-    st.line_chart(chart_data)
+    st.line_chart(pd.DataFrame({"パワー": powers}, index=years))
